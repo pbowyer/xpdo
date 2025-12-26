@@ -23,6 +23,7 @@ use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
+use Psr\Log\LogLevel;
 use xPDO\Om\xPDOCriteria;
 use xPDO\Om\xPDOQuery;
 
@@ -1996,6 +1997,9 @@ class xPDO implements LoggerAwareInterface
      */
     public function setDebug($v= true) {
         $this->_debug= $v;
+        if ($this->logger instanceof xPDOLogger) {
+            $this->logger->setDebug($v);
+        }
     }
 
     /**
@@ -2119,8 +2123,13 @@ class xPDO implements LoggerAwareInterface
             $this->logger->setLogTarget($target);
         }
 
+        $psrLevel = $level;
+        if (is_int($psrLevel)) {
+            $psrLevel = $this->translateLogLevelToPsr($psrLevel);
+        }
+
         // Pass the message on to the PSR-3 logger
-        $this->logger->log($level, $msg, $context);
+        $this->logger->log($psrLevel, $msg, $context);
 
         // Restore the target if it was changed
         if (!empty($oldTarget) && $this->logger instanceof xPDOLogger) {
@@ -2177,6 +2186,24 @@ class xPDO implements LoggerAwareInterface
                 $levelText= 'FATAL';
         }
         return $levelText;
+    }
+
+    protected function translateLogLevelToPsr($level): string
+    {
+        switch ($level) {
+            case xPDO::LOG_LEVEL_FATAL:
+                return LogLevel::EMERGENCY;
+            case xPDO::LOG_LEVEL_ERROR:
+                return LogLevel::ERROR;
+            case xPDO::LOG_LEVEL_WARN:
+                return LogLevel::WARNING;
+            case xPDO::LOG_LEVEL_INFO:
+                return LogLevel::INFO;
+            case xPDO::LOG_LEVEL_DEBUG:
+                return LogLevel::DEBUG;
+            default:
+                return LogLevel::EMERGENCY;
+        }
     }
 
     /**

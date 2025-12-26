@@ -32,6 +32,10 @@ class xPDOLogger implements LoggerInterface
      * @var int|string
      */
     protected $level;
+    /**
+     * @var bool
+     */
+    protected $debug = false;
 
     /**
      *
@@ -102,47 +106,52 @@ class xPDOLogger implements LoggerInterface
             $context['file'] = $_SERVER['SCRIPT_NAME'];
         }
 
-        $def = strtoupper($level);
+        $entryDef = '';
+        $entryFile = '';
+        $entryLine = '';
 
         if (!empty($context['def'])) {
-            $def .= " in {$context['def']}";
-            unset($context['def']);
+            $entryDef = " in {$context['def']}";
         }
         if (!empty($context['file'])) {
-            $def .= " @ {$context['file']}";
-            unset($context['file']);
+            $entryFile = " @ {$context['file']}";
         }
         if (!empty($context['line'])) {
-            $def .= " : {$context['line']}";
-            unset($context['line']);
+            $entryLine = " : {$context['line']}";
         }
+
+        $def = strtoupper($level) . $entryDef . $entryFile . $entryLine;
+        $contextForMessage = $context;
+        unset($contextForMessage['def'], $contextForMessage['file'], $contextForMessage['line']);
 
         // If an emergency was triggered, end immediately.
         if ($level === LogLevel::EMERGENCY) {
             while (ob_get_level() && @ob_end_flush()) {}
-            exit ('[' . strftime('%Y-%m-%d %H:%M:%S') . '] (' . $def . ') ' . $message . "\n" . json_encode($context, JSON_PRETTY_PRINT) . "\n" . ($this->getDebug() === true ? '<pre>' . "\n" . print_r(debug_backtrace(), true) . "\n" . '</pre>' : ''));
+            exit ('[' . strftime('%Y-%m-%d %H:%M:%S') . '] (' . $def . ') ' . $message . "\n" . json_encode($contextForMessage, JSON_PRETTY_PRINT) . "\n" . ($this->getDebug() === true ? '<pre>' . "\n" . print_r(debug_backtrace(), true) . "\n" . '</pre>' : ''));
         }
 
         // Process into format: [timestamp] (SEVERITY) msg {context}
         $content = ($target === 'HTML')
-            ? '<h5>[' . strftime('%Y-%m-%d %H:%M:%S') . '] (' . $def . ')</h5><pre>' . $message . "\n" . json_encode($context, JSON_PRETTY_PRINT)  . '</pre>' . "\n"
-            : '[' . strftime('%Y-%m-%d %H:%M:%S') . '] (' . $def . ') ' . $message . ' ' . json_encode($context) . "\n";
+            ? '<h5>[' . strftime('%Y-%m-%d %H:%M:%S') . '] (' . $def . ')</h5><pre>' . $message . "\n" . json_encode($contextForMessage, JSON_PRETTY_PRINT)  . '</pre>' . "\n"
+            : '[' . strftime('%Y-%m-%d %H:%M:%S') . '] (' . $def . ') ' . $message . ' ' . json_encode($contextForMessage) . "\n";
 
         if ($target === 'FILE') {
             $filename = isset($targetOptions['filename']) ? $targetOptions['filename'] : 'error.log';
             $filepath = isset($targetOptions['filepath']) ? $targetOptions['filepath'] : $this->cacheManager->getCachePath() . Cache\xPDOCacheManager::LOG_DIR;
             $this->cacheManager->writeFile($filepath . $filename, $content, 'a');
         }
-        elseif ($target === 'ARRAY' && isset($targetOptions['var']) && is_array($targetOptions['var'])) {
+        elseif ($target === 'ARRAY' && isset($targetOptions['var']) && (is_array($targetOptions['var']) || $targetOptions['var'] instanceof \ArrayAccess)) {
             $targetOptions['var'][] = $content;
         }
-        elseif ($target === 'ARRAY_EXTENDED' && isset($targetOptions['var']) && is_array($targetOptions['var'])) {
+        elseif ($target === 'ARRAY_EXTENDED' && isset($targetOptions['var']) && (is_array($targetOptions['var']) || $targetOptions['var'] instanceof \ArrayAccess)) {
             $targetOptions['var'][] = [
                 'content' => $content,
                 'level' => strtoupper($level),
                 'msg' => $message,
-                'def' => $def,
-            ] + $context;
+                'def' => $entryDef,
+                'file' => $entryFile,
+                'line' => $entryLine,
+            ] + $contextForMessage;
         }
         else {
             echo $content;
@@ -319,11 +328,21 @@ class xPDOLogger implements LoggerInterface
 
     public function getLogLevel()
     {
-        return $this->target;
+        return $this->level;
     }
 
     public function setLogLevel($level)
     {
         $this->level = is_int($level) ? $this->translateLevel($level) : $level;
+    }
+
+    public function getDebug(): bool
+    {
+        return $this->debug === true;
+    }
+
+    public function setDebug($debug): void
+    {
+        $this->debug = (bool) $debug;
     }
 }
