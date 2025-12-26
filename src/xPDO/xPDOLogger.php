@@ -127,13 +127,13 @@ class xPDOLogger implements LoggerInterface
         // If an emergency was triggered, end immediately.
         if ($level === LogLevel::EMERGENCY) {
             while (ob_get_level() && @ob_end_flush()) {}
-            exit ('[' . strftime('%Y-%m-%d %H:%M:%S') . '] (' . $def . ') ' . $message . "\n" . json_encode($contextForMessage, JSON_PRETTY_PRINT) . "\n" . ($this->getDebug() === true ? '<pre>' . "\n" . print_r(debug_backtrace(), true) . "\n" . '</pre>' : ''));
+            exit ('[' . date('Y-m-d H:i:s') . '] (' . $def . ') ' . $message . "\n" . json_encode($contextForMessage, JSON_PRETTY_PRINT) . "\n" . ($this->getDebug() === true ? '<pre>' . "\n" . print_r(debug_backtrace(), true) . "\n" . '</pre>' : ''));
         }
 
         // Process into format: [timestamp] (SEVERITY) msg {context}
         $content = ($target === 'HTML')
-            ? '<h5>[' . strftime('%Y-%m-%d %H:%M:%S') . '] (' . $def . ')</h5><pre>' . $message . "\n" . json_encode($contextForMessage, JSON_PRETTY_PRINT)  . '</pre>' . "\n"
-            : '[' . strftime('%Y-%m-%d %H:%M:%S') . '] (' . $def . ') ' . $message . ' ' . json_encode($contextForMessage) . "\n";
+            ? '<h5>[' . date('Y-m-d H:i:s') . '] (' . $def . ')</h5><pre>' . $message . "\n" . json_encode($contextForMessage, JSON_PRETTY_PRINT)  . '</pre>' . "\n"
+            : '[' . date('Y-m-d H:i:s') . '] (' . $def . ') ' . $message . ' ' . json_encode($contextForMessage) . "\n";
 
         if ($target === 'FILE') {
             $filename = isset($targetOptions['filename']) ? $targetOptions['filename'] : 'error.log';

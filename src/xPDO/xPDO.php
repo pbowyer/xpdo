@@ -304,15 +304,19 @@ class xPDO implements LoggerAwareInterface
             $this->logTarget = $this->getOption('log_target', null, php_sapi_name() === 'cli' ? 'ECHO' : 'HTML', true);
 
             if (!$this->services->has(LoggerInterface::class)) {
-                $this->services->add(LoggerInterface::class, function() {
-                    return new xPDOLogger(
+                $this->services->add(
+                    LoggerInterface::class,
+                    new xPDOLogger(
                         $this->getCacheManager(),
                         $this->logTarget,
                         $this->logLevel
-                    );
-                });
+                    )
+                );
             }
-            $this->logger = $this->services->get(LoggerInterface::class);
+            $logger = $this->services->get(LoggerInterface::class);
+            if ($logger instanceof LoggerInterface) {
+                $this->logger = $logger;
+            }
 
             if (!empty($dsn)) {
                 $this->addConnection($dsn, $username, $password, $this->config, $driverOptions);
