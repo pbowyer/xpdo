@@ -350,6 +350,9 @@ class xPDO {
             if (isset($this->config[xPDO::OPT_CACHE_PATH])) {
                 $this->cachePath = $this->config[xPDO::OPT_CACHE_PATH];
             }
+            if (!$this->logger instanceof LoggerInterface) {
+                $this->logger = new xPDOLogger($this);
+            }
         } catch (\Exception $e) {
             throw new xPDOException("Could not instantiate xPDO: " . $e->getMessage());
         }
@@ -2067,7 +2070,6 @@ class xPDO {
             return;
         }
         if (empty($file)) {
-            // Avoid collecting the full stack and args just to resolve file/line.
             $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
             if ($backtrace && isset($backtrace[1])) {
                 $file = $backtrace[1]['file'];
@@ -2117,67 +2119,7 @@ class xPDO {
             $this->logger->log($psrLevel, $message, $context);
             if ($level === xPDO::LOG_LEVEL_FATAL) {
                 while (ob_get_level() && @ob_end_flush()) {}
-                exit ('[' . date('Y-m-d H:i:s') . '] (' . $this->_getLogLevel($level) . $def . $file . $line . ') ' . $msg . "\n" . ($this->getDebug() === true ? '<pre>' . "\n" . print_r(debug_backtrace(), true) . "\n" . '</pre>' : ''));
-            }
-            return;
-        }
-        if (empty ($target)) {
-            $target = $this->logTarget;
-        }
-        $targetOptions = array();
-        if (is_array($target)) {
-            if (isset($target['options'])) $targetOptions =& $target['options'];
-            $target = isset($target['target']) ? $target['target'] : 'ECHO';
-        }
-        if ($level === xPDO::LOG_LEVEL_FATAL) {
-            while (ob_get_level() && @ob_end_flush()) {}
-            exit ('[' . date('Y-m-d H:i:s') . '] (' . $this->_getLogLevel($level) . $def . $file . $line . ') ' . $msg . "\n" . ($this->getDebug() === true ? '<pre>' . "\n" . print_r(debug_backtrace(), true) . "\n" . '</pre>' : ''));
-        }
-        if ($this->_debug === true || $level <= $this->logLevel) {
-            @ob_start();
-            if (!empty ($def)) {
-                $def= " in {$def}";
-            }
-            if (!empty ($file)) {
-                $file= " @ {$file}";
-            }
-            if (!empty ($line)) {
-                $line= " : {$line}";
-            }
-            switch ($target) {
-                case 'HTML' :
-                    echo '<h5>[' . date('Y-m-d H:i:s') . '] (' . $this->_getLogLevel($level) . $def . $file . $line . ')</h5><pre>' . $msg . '</pre>' . "\n";
-                    break;
-                default :
-                    echo '[' . date('Y-m-d H:i:s') . '] (' . $this->_getLogLevel($level) . $def . $file . $line . ') ' . $msg . "\n";
-            }
-            $content= @ob_get_contents();
-            @ob_end_clean();
-            if ($target=='FILE' && $this->getCacheManager()) {
-                $filename = isset($targetOptions['filename']) ? $targetOptions['filename'] : 'error.log';
-                $filepath = isset($targetOptions['filepath']) ? $targetOptions['filepath'] : $this->getCachePath() . Cache\xPDOCacheManager::LOG_DIR;
-                $this->cacheManager->writeFile($filepath . $filename, $content, 'a');
-            } elseif (
-                $target === 'ARRAY' &&
-                isset($targetOptions['var']) &&
-                (is_array($targetOptions['var']) || $targetOptions['var'] instanceof \ArrayAccess)
-            ) {
-                $targetOptions['var'][] = $content;
-            } elseif (
-                $target === 'ARRAY_EXTENDED' &&
-                isset($targetOptions['var']) &&
-                (is_array($targetOptions['var']) || $targetOptions['var'] instanceof \ArrayAccess)
-            ) {
-                $targetOptions['var'][] = array(
-                    'content' => $content,
-                    'level' => $this->_getLogLevel($level),
-                    'msg' => $msg,
-                    'def' => $def,
-                    'file' => $file,
-                    'line' => $line
-                );
-            } else {
-                echo $content;
+                exit ('[' . date('Y-m-d H:i:s') . '] (FATAL' . $def . $file . $line . ') ' . $msg . "\n" . ($this->getDebug() === true ? '<pre>' . "\n" . print_r(debug_backtrace(), true) . "\n" . '</pre>' : ''));
             }
         }
     }
