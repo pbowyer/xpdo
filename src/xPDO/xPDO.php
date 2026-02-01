@@ -2149,31 +2149,6 @@ class xPDO {
         return $backtrace;
     }
 
-    /**
-     * Gets a logging level as a string representation.
-     *
-     * @param integer $level The logging level to retrieve a string for.
-     * @return string The string representation of a valid logging level.
-     */
-    protected function _getLogLevel($level) {
-        switch ($level) {
-            case xPDO::LOG_LEVEL_DEBUG :
-                $levelText= 'DEBUG';
-                break;
-            case xPDO::LOG_LEVEL_INFO :
-                $levelText= 'INFO';
-                break;
-            case xPDO::LOG_LEVEL_WARN :
-                $levelText= 'WARN';
-                break;
-            case xPDO::LOG_LEVEL_ERROR :
-                $levelText= 'ERROR';
-                break;
-            default :
-                $levelText= 'FATAL';
-        }
-        return $levelText;
-    }
 
     /**
      * Escapes the provided string using the platform-specific escape character.
